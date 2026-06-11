@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Job Posting",
+  "type": "object",
+  "required": ["id", "title", "company", "location", "link", "source"],
+  "properties": {
+    "id": {"type": "string"},
+    "title": {"type": "string"},
+    "company": {"type": "string"},
+    "location": {"type": "string"},
+    "remoteType": {"type": "string"},
+    "salary": {"type": ["string", "null"]},
+    "description": {"type": ["string", "null"]},
+    "link": {"type": "string"},
+    "source": {"type": "string"},
+    "score": {"type": ["number", "null"]},
+    "matchedSkills": {"type": "array", "items": {"type": "string"}},
+    "missingSkills": {"type": "array", "items": {"type": "string"}},
+    "notes": {"type": ["string", "null"]}
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "goal": {
+    "dailyAppliableTarget": 25,
+    "checkFrequencyHours": 1,
+    "stopWhenDailyTargetReached": true
+  },
+  "alerting": {
+    "thresholdScore": 85,
+    "replyFlow": {
+      "YES": "start tailoring resume toward >=95 where truthful, create cover letter if useful, log the application package, and keep tracker updated",
+      "NO": "skip tailoring"
+    }
+  },
+  "candidateGuardrails": {
+    "officialCurrentTitle": "Cybersecurity Analyst (Volunteer)",
+    "currentWork": "Support GRC and security operations initiatives for a healthcare (dental) platform, including maintaining compliance documentation, assisting with risk assessments, monitoring security-related events, and contributing to governance and policy updates aligned with NIST-based practices",
+    "realWorkTools": [
+      "Wazuh SIEM",
+      "Linux (Ubuntu)",
+      "Docker",
+      "Cloudflare Tunnel",
+      "Nginx Proxy Manager",
+      "Wireshark (basic)",
+      "Git/GitHub"
+    ],
+    "labOnlyTools": [
+      "Splunk",
+      "OWASP ZAP",
+      "Burp Suite",
+      "Nmap",
+      "Snort",
+      "Azure Security Center",
+      "AWS Security tools",
+      "Google Cloud security labs"
+    ],
+    "securityPlusStatus": "In progress (actively preparing, expected completion within 1–2 months)",
+    "otherCerts": [
+      "AWS Educate (Cloud 101, Storage, Management Console)",
+      "Google Cloud Skills Boost (Networking Fundamentals, Load Balancing, Terraform)"
+    ]
+  }
+}

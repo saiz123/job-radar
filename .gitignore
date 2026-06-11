@@ -1,0 +1,45 @@
+# Virtualenvs / dependencies
+.venv/
+venv/
+node_modules/
+
+# Secrets / local config
+.env
+.env.*
+!.env.example
+*.local
+config/*.local.*
+config/secrets*
+
+# Runtime state, logs, queues, generated data
+state/
+incoming/
+processed/
+data/
+*.log
+*.pid
+*.sqlite*
+*.db
+
+# Private/generated job-search artifacts
+resumes/
+tailored/
+tailored-v4/
+outbox*.ndjson
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build/cache
+.cache/
+dist/
+build/
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "hourly": true,
+  "maxQueriesPerRun": 20,
+  "maxUrlsPerRun": 100,
+  "sleepBetweenRequestsMs": 1200,
+  "engines": {
+    "search": true,
+    "greenhouse": true,
+    "lever": true,
+    "workday": true,
+    "companyPages": true,
+    "linkedin": false
+  },
+  "reporting": {
+    "emitHourlySummary": true,
+    "emitOnlyOnChange": false
+  }
+}

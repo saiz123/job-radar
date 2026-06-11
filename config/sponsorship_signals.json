@@ -1,0 +1,45 @@
+{
+  "hardReject": [
+    "does not now or in the future require sponsorship",
+    "no future sponsorship",
+    "must be authorized to work in the united states without sponsorship",
+    "must be legally authorized to work in the united states without sponsorship",
+    "must be a us citizen",
+    "u.s. citizen only",
+    "us citizen only",
+    "green card or us citizen only"
+  ],
+  "softNegative": [
+    "must be authorized to work in the united states",
+    "must be legally authorized to work in the united states",
+    "employment eligibility in the u.s.",
+    "work authorization required"
+  ],
+  "positive": [
+    "visa sponsorship",
+    "sponsorship available",
+    "h-1b",
+    "stem opt",
+    "opt candidate",
+    "international students welcome"
+  ],
+  "companyHints": {
+    "rapid7": "likely",
+    "tenable": "likely",
+    "cloudflare": "likely",
+    "datadog": "likely",
+    "okta": "likely",
+    "elastic": "likely",
+    "arctic wolf": "unknown",
+    "reliaquest": "unknown",
+    "red canary": "unknown",
+    "secureworks": "unknown",
+    "mizuho": "unknown",
+    "kemper": "unknown",
+    "booz allen hamilton": "unlikely",
+    "peraton": "unlikely",
+    "general dynamics": "blocked",
+    "lockheed martin": "blocked",
+    "caci": "blocked"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "goal": {
+    "dailyAppliableTarget": 25,
+    "checkFrequencyHours": 1,
+    "stopWhenDailyTargetReached": true
+  },
+  "canonicalVerification": {
+    "enabled": true,
+    "officialSourcesPreferred": true,
+    "aggregatorsAreLeadsOnly": true,
+    "minimumVerificationConfidence": 0.7
+  },
+  "database": {
+    "path": "state/v3.sqlite3"
+  },
+  "leadSources": {
+    "aggregators": ["linkedin", "indeed", "glassdoor"],
+    "officialAts": ["greenhouse", "lever", "workday", "ashby", "smartrecruiters", "icims", "bamboohr"]
+  }
+}

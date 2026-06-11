@@ -1,0 +1,120 @@
+{
+  "candidate": {
+    "name": "Sai Teja Kavuri",
+    "preferredName": "Sai",
+    "location": "Saint Louis, Missouri, United States",
+    "openTo": ["remote", "hybrid", "onsite", "relocation"],
+    "workAuthorization": {
+      "current": "OPT",
+      "futureSponsorshipRequired": true,
+      "notes": "Requires H1B sponsorship in future"
+    },
+    "salaryMinimumUsd": 60000,
+    "targetTitles": [
+      "SOC Analyst I",
+      "Cybersecurity Analyst (Entry Level)",
+      "Security Operations Analyst",
+      "Junior Penetration Tester"
+    ],
+    "mustHaveFilters": [
+      "entry-level or associate roles",
+      "open to OPT candidates or visa sponsorship now/future",
+      "SOC / security operations / blue team focused roles",
+      "hands-on security monitoring, incident response, SIEM-based roles"
+    ],
+    "hardNoFilters": [
+      "senior-level roles requiring 5+ years",
+      "heavy DevOps-only roles without security focus",
+      "fully clearance-required roles",
+      "unpaid roles"
+    ],
+    "preferredCompanies": [
+      "mid-size cybersecurity firms",
+      "MSSPs",
+      "cloud-focused companies",
+      "consulting firms building security teams"
+    ],
+    "avoidCompanies": [
+      "roles strictly requiring US citizenship or active clearance",
+      "companies with no sponsorship history",
+      "non-technical compliance-only roles unless hybrid with SOC"
+    ],
+    "realWorkTools": [
+      "Wazuh SIEM",
+      "Linux (Ubuntu)",
+      "Docker",
+      "Cloudflare Tunnel",
+      "Nginx Proxy Manager",
+      "Wireshark (basic)",
+      "Git/GitHub"
+    ],
+    "labTools": [
+      "Splunk",
+      "OWASP ZAP",
+      "Burp Suite",
+      "Nmap",
+      "Snort",
+      "Azure Security Center",
+      "AWS Security tools",
+      "Google Cloud security labs"
+    ],
+    "currentRole": {
+      "title": "Cybersecurity Analyst (Volunteer)",
+      "organization": "Community Dreams Foundation",
+      "summary": "Support GRC and security operations initiatives for a healthcare (dental) platform, including maintaining compliance documentation, assisting with risk assessments, monitoring security-related events, and contributing to governance and policy updates aligned with NIST-based practices"
+    },
+    "education": [
+      {
+        "degree": "Master of Science in Information Systems",
+        "school": "Saint Louis University",
+        "year": 2025
+      },
+      {
+        "degree": "Bachelor of Technology in Computer Science and Engineering",
+        "school": "Jawaharlal Nehru Technological University",
+        "year": 2023
+      }
+    ],
+    "certifications": [
+      {
+        "name": "CompTIA Security+",
+        "status": "in progress",
+        "expectedMonths": 2
+      },
+      {
+        "name": "AWS Educate",
+        "status": "completed",
+        "details": ["Cloud 101", "Storage", "Management Console"]
+      },
+      {
+        "name": "Google Cloud Skills Boost",
+        "status": "completed",
+        "details": ["Networking Fundamentals", "Load Balancing", "Terraform"]
+      }
+    ]
+  },
+  "search": {
+    "locations": ["Remote - United States", "Saint Louis, Missouri", "United States"],
+    "frequencyHours": 1,
+    "alertThreshold": 85,
+    "tailorThreshold": 95
+  },
+  "alerts": {
+    "include": [
+      "job title",
+      "company name",
+      "location",
+      "salary",
+      "match score",
+      "top matched skills/keywords",
+      "key missing skills",
+      "direct application link",
+      "short AI-generated summary",
+      "option to trigger tailored resume + cover letter generation"
+    ],
+    "replyFlow": {
+      "YES": "start tailoring resume toward >=95 relevance where truthful, create cover letter if useful, and log application materials",
+      "NO": "skip tailoring and leave the job logged only"
+    }
+  }
+}

@@ -1,0 +1,194 @@
+{
+  "companies": [
+    {
+      "company": "Arctic Wolf",
+      "bucket": "mssp",
+      "atsType": "workday",
+      "careersUrl": "https://arcticwolf.wd1.myworkdayjobs.com/External",
+      "priority": 1,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "unknown",
+      "clearanceRisk": "low"
+    },
+    {
+      "company": "ReliaQuest",
+      "bucket": "mssp",
+      "atsType": "workday",
+      "careersUrl": "https://reliaquest.wd5.myworkdayjobs.com/ReliaQuest_Careers",
+      "priority": 1,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "unknown",
+      "clearanceRisk": "low"
+    },
+    {
+      "company": "Expel",
+      "bucket": "mssp",
+      "atsType": "greenhouse",
+      "careersUrl": "https://job-boards.greenhouse.io/expel",
+      "priority": 1,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "unknown",
+      "clearanceRisk": "low"
+    },
+    {
+      "company": "Secureworks",
+      "bucket": "mssp",
+      "atsType": "company-careers",
+      "careersUrl": "https://www.secureworks.com/company/careers",
+      "priority": 1,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "unknown",
+      "clearanceRisk": "low"
+    },
+    {
+      "company": "Red Canary",
+      "bucket": "mssp",
+      "atsType": "greenhouse",
+      "careersUrl": "https://job-boards.greenhouse.io/zscalerredcanary",
+      "priority": 1,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "unknown",
+      "clearanceRisk": "low"
+    },
+    {
+      "company": "Huntress",
+      "bucket": "mssp",
+      "atsType": "greenhouse",
+      "careersUrl": "https://job-boards.greenhouse.io/huntress",
+      "priority": 1,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "unknown",
+      "clearanceRisk": "low"
+    },
+    {
+      "company": "eSentire",
+      "bucket": "mssp",
+      "atsType": "company-careers",
+      "careersUrl": "https://www.esentire.com/company/careers",
+      "priority": 2,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "unknown",
+      "clearanceRisk": "low"
+    },
+    {
+      "company": "Rapid7",
+      "bucket": "security-vendor",
+      "atsType": "company-careers",
+      "careersUrl": "https://careers.rapid7.com/jobs/search",
+      "priority": 1,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "likely",
+      "clearanceRisk": "low"
+    },
+    {
+      "company": "Tenable",
+      "bucket": "security-vendor",
+      "atsType": "greenhouse",
+      "careersUrl": "https://job-boards.greenhouse.io/tenableinc",
+      "priority": 1,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "likely",
+      "clearanceRisk": "low"
+    },
+    {
+      "company": "Cloudflare",
+      "bucket": "security-vendor",
+      "atsType": "greenhouse",
+      "careersUrl": "https://job-boards.greenhouse.io/cloudflare",
+      "priority": 1,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "likely",
+      "clearanceRisk": "low"
+    },
+    {
+      "company": "Datadog",
+      "bucket": "security-vendor",
+      "atsType": "greenhouse",
+      "careersUrl": "https://job-boards.greenhouse.io/datadog",
+      "priority": 2,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "likely",
+      "clearanceRisk": "low"
+    },
+    {
+      "company": "Elastic",
+      "bucket": "security-vendor",
+      "atsType": "greenhouse",
+      "careersUrl": "https://jobs.elastic.co",
+      "priority": 2,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "likely",
+      "clearanceRisk": "low"
+    },
+    {
+      "company": "Okta",
+      "bucket": "security-vendor",
+      "atsType": "greenhouse",
+      "careersUrl": "https://job-boards.greenhouse.io/okta",
+      "priority": 2,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "likely",
+      "clearanceRisk": "low"
+    },
+    {
+      "company": "Wiz",
+      "bucket": "security-vendor",
+      "atsType": "greenhouse",
+      "careersUrl": "https://job-boards.greenhouse.io/wizinc",
+      "priority": 2,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "unknown",
+      "clearanceRisk": "low"
+    },
+    {
+      "company": "Optiv",
+      "bucket": "consulting",
+      "atsType": "company-careers",
+      "careersUrl": "https://careers.optiv.com",
+      "priority": 1,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "unknown",
+      "clearanceRisk": "medium"
+    },
+    {
+      "company": "GuidePoint Security",
+      "bucket": "consulting",
+      "atsType": "greenhouse",
+      "careersUrl": "https://job-boards.greenhouse.io/guidepointsecurity",
+      "priority": 2,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "unknown",
+      "clearanceRisk": "medium"
+    },
+    {
+      "company": "Coalfire",
+      "bucket": "consulting",
+      "atsType": "company-careers",
+      "careersUrl": "https://coalfire.com/company/careers",
+      "priority": 2,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "unknown",
+      "clearanceRisk": "medium"
+    },
+    {
+      "company": "Kemper",
+      "bucket": "insurance",
+      "atsType": "company-careers",
+      "careersUrl": "https://careers.kemper.com",
+      "priority": 2,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "unknown",
+      "clearanceRisk": "low"
+    },
+    {
+      "company": "Mizuho",
+      "bucket": "financial-services",
+      "atsType": "company-careers",
+      "careersUrl": "https://mizuho.eightfold.ai/careers",
+      "priority": 2,
+      "entryCyberLikely": true,
+      "sponsorshipLikely": "unknown",
+      "clearanceRisk": "low"
+    }
+  ]
+}

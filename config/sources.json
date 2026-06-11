@@ -1,0 +1,31 @@
+{
+  "sources": [
+    {
+      "name": "greenhouse-direct",
+      "type": "direct-url-postings",
+      "enabled": true,
+      "notes": "Fetch direct Greenhouse job posting URLs that can be retrieved without browser automation.",
+      "urls": []
+    },
+    {
+      "name": "lever-direct",
+      "type": "direct-url-postings",
+      "enabled": true,
+      "notes": "Fetch direct Lever job posting URLs that can be retrieved without browser automation.",
+      "urls": []
+    },
+    {
+      "name": "company-careers-direct",
+      "type": "direct-url-postings",
+      "enabled": true,
+      "notes": "Seed with company careers pages or specific postings that are fetch-friendly.",
+      "urls": []
+    },
+    {
+      "name": "manual-intake",
+      "type": "incoming-folder",
+      "enabled": true,
+      "path": "incoming"
+    }
+  ]
+}

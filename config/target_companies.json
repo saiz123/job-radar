@@ -1,0 +1,33 @@
+{
+  "buckets": {
+    "mssps": [
+      "Arctic Wolf",
+      "ReliaQuest",
+      "Expel",
+      "Secureworks",
+      "Red Canary"
+    ],
+    "cloud_security": [
+      "Cloudflare",
+      "Datadog",
+      "CrowdStrike",
+      "SentinelOne",
+      "Wiz"
+    ],
+    "consulting_and_services": [
+      "GuidePoint Security",
+      "Optiv",
+      "Coalfire",
+      "Booz Allen Hamilton",
+      "Bishop Fox"
+    ],
+    "broader_targets": [
+      "ServiceNow",
+      "Okta",
+      "Rapid7",
+      "Tenable",
+      "Elastic"
+    ]
+  },
+  "notes": "Use these as sourcing targets, but still filter aggressively for sponsorship, entry-level fit, and clearance/citizenship blockers. Some companies may have many ineligible roles; company name alone is never enough."
+}
