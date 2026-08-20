@@ -1,0 +1,13 @@
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+jinja2==3.1.6
+itsdangerous==2.2.0
+argon2-cffi==25.1.0
+python-multipart==0.0.20
+httpx==0.28.1
+pytest==8.4.1
+pytest-asyncio==1.1.0
+pytest-cov==6.2.1
+orjson==3.11.2
+curl-cffi==0.16.0
+python-calamine==0.8.2
