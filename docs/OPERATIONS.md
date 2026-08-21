@@ -221,6 +221,27 @@ Scripts live under:
 /home/saikali/.hermes/scripts/jobradar-*.sh
 ```
 
+The active discover cron uses `/home/saikali/.hermes/scripts/jobradar-discover.sh`.
+
+Important behavior:
+
+- Starts a Job Radar scan row through `/api/v1/scans`.
+- Runs `node scan.mjs` inside `career-ops`.
+- Converts `career-ops/data/scan-history.tsv` with `scripts/careerops_scan_history_to_jobradar.py`.
+- Backfills career-ops rows that were already discovered but never imported into Job Radar.
+- Filters scan-history to cybersecurity-relevant titles before posting candidates.
+- Posts payloads via a temporary JSON file to avoid shell argument-length failures on large backfills.
+- Completes the scan by POSTing `/api/v1/scans/{scan_id}/ingest`.
+
+2026-08-20 repair proof:
+
+- Root cause: discover cron only submitted lines appended during the current `scan.mjs` run, so the existing career-ops backlog stayed invisible in Job Radar. Large backfill payloads also exceeded shell argument length when sent inline with `curl -d`.
+- Manual backfill imported `275` career-ops scan-history candidates into the previously running scan.
+- Ingest result: `273` jobs added, `2` jobs updated, `0` failures.
+- Seed/test proof rows were archived from the live dashboard.
+- Non-cyber false positives were archived and future discover imports use a cybersecurity keyword filter.
+- Visible live job count after cleanup: `71` real cybersecurity jobs.
+
 Delivery is intentionally local-only for Job Radar automations, matching Sai's preference to keep job-search automation website/local-only and not Telegram-notified.
 
 `jobradar-evaluate` is configured as a script-only (`no_agent=true`) job using `jobradar-evaluate.sh`. It consumes `/api/v1/jobs/evaluation-queue`, writes conservative career-ops markdown reports, attaches report number/score/legitimacy through the Job Radar API, and stores an `automation_runs` audit row. Manual proof on 2026-08-20 consumed queue `2 -> 0` and persisted report numbers `84` and `85` with score `3.16` / legitimacy `High Confidence`.

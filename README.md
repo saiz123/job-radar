@@ -208,6 +208,8 @@ The production setup uses Hermes cron jobs. Scripts live under:
 ~/.hermes/scripts/jobradar-*.sh
 ```
 
+A sanitized copy of the fixed discover runner is also tracked at `scripts/jobradar-discover.sh`.
+
 Current automation classes:
 
 - liveness check
