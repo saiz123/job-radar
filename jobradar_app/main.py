@@ -539,15 +539,25 @@ APP_HTML = """
       }).join('');
     }
 
+    function renderInlineError(targetId, title, error) {
+      const target = document.getElementById(targetId) || document.querySelector('.main') || document.body;
+      target.innerHTML = `<div class="panel"><div class="pb"><h2>${escapeHtml(title)}</h2><div class="code">${escapeHtml(error?.message || error || 'Unknown error')}</div><button class="btn" type="button" onclick="location.reload()">Retry</button></div></div>`;
+    }
+
     function bindJobLinks(state) {
       for (const link of document.querySelectorAll('[data-job-link]')) {
         link.addEventListener('click', async (event) => {
           event.preventDefault();
-          const job = await fetchJson(`/api/v1/jobs/${link.dataset.jobLink}`);
-          history.replaceState({}, '', `/jobs/${link.dataset.jobLink}`);
-          renderDetail(job);
-          showSection('detail');
-          renderPrimaryNav('detail', state);
+          try {
+            const job = await fetchJson(`/api/v1/jobs/${link.dataset.jobLink}`, { timeoutMs: 10000 });
+            history.replaceState({}, '', `/jobs/${link.dataset.jobLink}`);
+            renderDetail(job);
+            showSection('detail');
+            renderPrimaryNav('detail', state);
+          } catch (error) {
+            renderInlineError('detail', 'Job detail could not be loaded', error);
+            showSection('detail');
+          }
         });
       }
     }
@@ -586,13 +596,32 @@ APP_HTML = """
       return `<span class="b onsite">${escapeHtml(label)}</span>`;
     }
 
+    function sponsorshipDerivation(job, ev = null) {
+      const conf = Math.round(Number(job?.sponsorship?.confidence || 0) * 100);
+      const cls = job?.sponsorship?.class || 'Not stated';
+      const text = ev?.evidence_text || ev?.quoted_span || job?.sponsorship?.evidence_summary || '';
+      const fy = (text.match(/FY\s?\d{4}/i) || ev?.source_as_of?.match(/FY\s?\d{4}/i) || [null])[0];
+      const approvals = (text.match(/(\d+)\s+(?:initial\s+)?approvals?/i) || [null, null])[1];
+      if (approvals && fy) return `Confidence ${conf}% from ${approvals} H-1B approvals in ${fy}; ${cls} employers map to this confidence band.`;
+      if (fy) return `Confidence ${conf}% from ${fy} sponsorship history and employer signals.`;
+      if (conf) return `Confidence ${conf}% from stored sponsorship evidence and employer signals.`;
+      return 'No sponsorship confidence derivation is available yet.';
+    }
+
+    function sourceYearLabel(ev) {
+      const text = `${ev?.evidence_text || ''} ${ev?.quoted_span || ''} ${ev?.source_as_of || ''}`;
+      const fy = (text.match(/FY\s?\d{4}/i) || [null])[0];
+      return fy || 'Source year unknown';
+    }
+
     function sponsorshipBadge(job) {
       const cls = String(job.sponsorship?.class || 'unknown').toLowerCase();
       const conf = Number(job.sponsorship?.confidence || 0);
-      if (cls.includes('likely') || cls.includes('yes') || cls.includes('support')) return `<span class="b sp-yes">Sponsor likely ${Math.round(conf*100)}%</span>`;
-      if (cls.includes('possible') || cls.includes('historically')) return `<span class="b sp-mid">Possible ${Math.round(conf*100)}%</span>`;
-      if (cls.includes('no') || cls.includes('clearance') || cls.includes('citizen')) return `<span class="b sp-none">${escapeHtml(job.sponsorship?.class || 'No sponsor')}</span>`;
-      return `<span class="b sp-unk">${escapeHtml(job.sponsorship?.class || 'Not stated')}</span>`;
+      const title = escapeHtml(sponsorshipDerivation(job));
+      if (cls.includes('likely') || cls.includes('yes') || cls.includes('support')) return `<span class="b sp-yes" title="${title}">Sponsor likely ${Math.round(conf*100)}%</span>`;
+      if (cls.includes('possible') || cls.includes('historically')) return `<span class="b sp-mid" title="${title}">Possible ${Math.round(conf*100)}%</span>`;
+      if (cls.includes('no') || cls.includes('clearance') || cls.includes('citizen')) return `<span class="b sp-none" title="${title}">${escapeHtml(job.sponsorship?.class || 'No sponsor')}</span>`;
+      return `<span class="b sp-unk" title="${title}">${escapeHtml(job.sponsorship?.class || 'Not stated')}</span>`;
     }
 
     function sourceShort(job) {
@@ -622,11 +651,28 @@ APP_HTML = """
       return `<div class="acts"><a class="btn primary" href="/resume/${escapeHtml(job.id)}">Tailor resume</a>${job.application_url ? `<a class="btn" href="${escapeHtml(job.application_url)}" target="_blank" rel="noreferrer">Open original</a>` : ''}<button class="btn" data-job-link="${escapeHtml(job.id)}">View details</button></div>`;
     }
 
+    function careerOpsState(job) {
+      const value = job?.scores?.career_ops;
+      const report = job?.application?.careerops_tracker_num;
+      if (value !== null && value !== undefined && value !== '') {
+        return { value: fmtMaybe(value), label: '1.0–5.0', state: 'scored', help: report ? `Report #${report}` : 'Career-Ops evaluation attached' };
+      }
+      if (job?.career_ops_error || job?.application?.careerops_error) return { value: 'Error', label: 'Could not evaluate', state: 'failed', help: job.career_ops_error || job.application.careerops_error };
+      if (['Rejected', 'Withdrawn', 'Archived'].includes(job?.status)) return { value: 'N/A', label: 'Not applicable', state: 'na', help: 'Excluded/closed jobs are not sent for Career-Ops evaluation.' };
+      return { value: 'Pending', label: 'Evaluating…', state: 'pending', help: 'Career-Ops runs after discovery; retry from automation if it stays pending.' };
+    }
+
+    function careerOpsCell(job) {
+      const co = careerOpsState(job);
+      const cls = co.state === 'scored' ? 'sp-yes' : co.state === 'failed' ? 'sp-none' : co.state === 'na' ? 'stage' : 'sp-mid';
+      return `<span class="b ${cls}" title="${escapeHtml(co.help)}">${escapeHtml(co.value)}</span>`;
+    }
+
     function scorePill(job) {
       const personal = job?.scores?.personal;
-      const career = job?.scores?.career_ops;
+      const co = careerOpsState(job);
       const tier = job?.scores?.tier ?? job?.tier ?? '—';
-      return `<span class=\"pill\">Score ${fmtMaybe(personal)} · Career ${career ?? '—'} · Tier ${tier}</span>`;
+      return `<span class=\"pill\" title=\"${escapeHtml(co.help)}\">Score ${fmtMaybe(personal)} · C-Ops ${escapeHtml(co.value)} · Tier ${tier}</span>`;
     }
 
     function jobFlags(job) {
@@ -642,14 +688,21 @@ APP_HTML = """
         </div>`;
     }
 
+    function isAbortError(error) {
+      return error?.name === 'AbortError' || String(error?.message || error).toLowerCase().includes('abort') || String(error?.message || error).toLowerCase().includes('timed out loading');
+    }
+
     async function fetchJson(path, options = {}) {
       const timeoutMs = options.timeoutMs || 0;
       const controller = timeoutMs ? new AbortController() : null;
-      const timer = timeoutMs ? setTimeout(() => controller.abort(), timeoutMs) : null;
+      const timer = timeoutMs ? setTimeout(() => controller.abort(new DOMException(`Timed out loading ${path}`, 'AbortError')), timeoutMs) : null;
       try {
         const res = await fetch(path, { credentials: 'same-origin', signal: controller ? controller.signal : undefined });
         if (!res.ok) throw new Error(`${path} -> HTTP ${res.status}`);
         return await res.json();
+      } catch (error) {
+        if (isAbortError(error)) throw new Error(`Timed out loading ${path}. Showing cached/partial dashboard state; retry or refresh if this panel is still needed.`);
+        throw error;
       } finally {
         if (timer) clearTimeout(timer);
       }
@@ -659,9 +712,29 @@ APP_HTML = """
       try {
         return await fetchJson(path, { timeoutMs });
       } catch (error) {
-        console.warn('Optional dashboard request failed', path, error?.message || error);
+        if (!isAbortError(error)) console.warn('Optional dashboard request failed', path, error?.message || error);
         return fallback;
       }
+    }
+
+    async function postJson(path, body = {}) {
+      const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(body) });
+      if (!res.ok) throw new Error(`${path} -> HTTP ${res.status}`);
+      return await res.json().catch(() => ({}));
+    }
+
+    function scanPill(state) {
+      const scan = state?.status?.latest_scan || state?.digest?.latest_scan || {};
+      const status = String(scan.status || state?.status?.health || state?.health?.status || 'loading').toLowerCase();
+      if (status.includes('running')) return '<span class="live-dot"></span>Scan in progress';
+      if (status.includes('loading') && !scan.started_at && !scan.completed_at) return '<span class="live-dot" style="background:var(--text-tertiary)"></span>Scan idle';
+      if (status.includes('fail') || status.includes('error')) return `<span class="live-dot" style="background:var(--sev-medium)"></span>Scan failed — retry`;
+      const when = scan.completed_at || scan.started_at || state?.health?.checks?.scheduler?.last_scan_at;
+      return `<span class="live-dot" style="background:var(--text-tertiary)"></span>Last scan: ${agoLabel(when)}`;
+    }
+
+    function loadingRows(colspan, label = 'Loading…') {
+      return `<tr><td colspan="${colspan}" class="muted"><div class="empty">${escapeHtml(label)}</div></td></tr>`;
     }
 
     function renderPrimaryNav(activeId, state = null) {
@@ -699,6 +772,29 @@ APP_HTML = """
       const target = document.getElementById(id) || document.getElementById('today');
       target.classList.add('active');
       renderPrimaryNav(id, window.__JR_STATE || null);
+      ensureSectionData(id).catch((error) => console.debug('Section refresh skipped', id, error?.message || error));
+    }
+
+    async function ensureSectionData(id) {
+      const state = window.__JR_STATE;
+      if (!state) return;
+      if (id === 'companies' && state.companies?.status === 'loading') {
+        state.companies = await fetchJsonOptional('/api/v1/companies', { items: [], total: 0 }, 8000);
+        renderCompanies(state); renderPrimaryNav(id, state);
+      } else if (id === 'contacts' && state.contacts?.status === 'loading') {
+        state.contacts = await fetchJsonOptional('/api/v1/contacts', { items: [], total: 0 }, 8000);
+        renderContacts(state); renderPrimaryNav(id, state);
+      } else if (id === 'documents' && state.documents?.status === 'loading') {
+        state.documents = await fetchJsonOptional('/api/v1/documents', { items: [], total: 0 }, 8000);
+        renderDocuments(state); renderPrimaryNav(id, state);
+      } else if (id === 'interviews' && state.interviews?.status === 'loading') {
+        state.interviews = await fetchJsonOptional('/api/v1/interviews', { items: [], total: 0 }, 8000);
+        renderInterviews(state); renderPrimaryNav(id, state);
+      } else if (id === 'automation' && state.runs?.status === 'loading') {
+        state.runs = await fetchJsonOptional('/api/v1/automation/runs?limit=10', { items: [], total: 0 }, 8000);
+        state.failures = await fetchJsonOptional('/api/v1/automation/failures', { items: [], total: 0 }, 8000);
+        renderAutomation(state); renderPrimaryNav(id, state);
+      }
     }
 
     function renderToday(data) {
@@ -725,7 +821,7 @@ APP_HTML = """
             <div class="top"><div><h3>${escapeHtml(job.title)}</h3><div class="co">${escapeHtml(job.company?.name || 'Unknown company')} · ${escapeHtml(locationShort(job))}</div></div>${scoreWidget(job.scores?.personal)}</div>
             <div class="row">${workModeBadge(job)}${sponsorshipBadge(job)}<span class="b new">New · ${agoLabel(job.discovered_at || job.created_at)}</span></div>
             <ul class="why">${topReasons(job).map((reason, i) => `<li><b>+${Math.max(4, 16 - i*4)}</b>${escapeHtml(reason)}</li>`).join('') || '<li><b>+8</b>Prioritized from current score and workflow state.</li>'}</ul>
-            <div class="meta-line"><span>${escapeHtml(job.salary_text || 'Not disclosed')}</span><span>${sourceShort(job)}</span><span>C-Ops ${fmtMaybe(job.scores?.career_ops)}</span></div>
+            <div class="meta-line"><span>${escapeHtml(job.salary_text || 'Not disclosed')}</span><span>${sourceShort(job)}</span><span>C-Ops ${escapeHtml(careerOpsState(job).value)}</span></div>
             ${renderActionButtons(job)}
           </article>`).join('') : '<div class="empty">No jobs are currently available in the digest.</div>'}</div>
         <div class="sechead"><h2>Follow-up required</h2><div class="rule"></div><span class="meta">${followups.length} due</span></div>
@@ -745,7 +841,7 @@ APP_HTML = """
       } else if (activeView === 'cards') {
         body = `<div class="reco">${rows.length ? rows.slice(0, 18).map((job) => `<article class="card ${Number(job.scores?.personal || 0) >= 82 ? 'hot' : ''}"><div class="top"><div><h3><a href="/jobs/${escapeHtml(job.id)}" data-job-link="${escapeHtml(job.id)}">${escapeHtml(job.title)}</a></h3><div class="co">${escapeHtml(job.company?.name || '—')}</div></div>${scoreWidget(job.scores?.personal)}</div><div class="row">${workModeBadge(job)}${sponsorshipBadge(job)}</div>${renderActionButtons(job)}</article>`).join('') : '<div class="empty">No jobs match this filter.</div>'}</div>`;
       } else {
-        body = `<div class="tblwrap"><table><thead><tr><th style="width:26px">☆</th><th>Company</th><th>Title</th><th>Location</th><th>Salary</th><th>Match</th><th>C-Ops</th><th>Sponsorship</th><th>Posted</th><th>Src</th><th>Status</th><th style="width:26px"></th></tr></thead><tbody>${rows.length ? rows.map((job, idx) => `<tr class="${idx === 0 ? 'sel' : ''} ${['Rejected','Withdrawn','Archived'].includes(job.status) ? 'excluded' : ''}"><td>☆</td><td><span class="mono">${escapeHtml(job.company?.name || '—')}</span></td><td class="t"><b><a href="/jobs/${escapeHtml(job.id)}" data-job-link="${escapeHtml(job.id)}">${escapeHtml(job.title)}</a></b></td><td>${workModeBadge(job)}</td><td class="mono">${escapeHtml(job.salary_text || 'Not disclosed')}</td><td>${scoreWidget(job.scores?.personal)}</td><td class="mono">${fmtMaybe(job.scores?.career_ops)}</td><td>${sponsorshipBadge(job)}</td><td class="mono">${agoLabel(job.discovered_at || job.created_at)}</td><td class="mono">${sourceShort(job)}</td><td><span class="b stage">${escapeHtml(job.status || '—')}</span></td><td>⋯</td></tr>`).join('') : '<tr><td colspan="12" class="muted">No jobs match this filter.</td></tr>'}</tbody></table></div>`;
+        body = `<div class="tblwrap"><table><thead><tr><th style="width:26px">☆</th><th>Company</th><th>Title</th><th>Location</th><th>Salary</th><th>Match</th><th>C-Ops</th><th>Sponsorship</th><th>Posted</th><th>Src</th><th>Status</th><th style="width:26px"></th></tr></thead><tbody>${rows.length ? rows.map((job, idx) => `<tr class="${idx === 0 ? 'sel' : ''} ${['Rejected','Withdrawn','Archived'].includes(job.status) ? 'excluded' : ''}"><td>☆</td><td><span class="mono">${escapeHtml(job.company?.name || '—')}</span></td><td class="t"><b><a href="/jobs/${escapeHtml(job.id)}" data-job-link="${escapeHtml(job.id)}">${escapeHtml(job.title)}</a></b></td><td>${workModeBadge(job)}</td><td class="mono">${escapeHtml(job.salary_text || 'Not disclosed')}</td><td>${scoreWidget(job.scores?.personal)}</td><td>${careerOpsCell(job)}</td><td>${sponsorshipBadge(job)}</td><td class="mono">${agoLabel(job.discovered_at || job.created_at)}</td><td class="mono">${sourceShort(job)}</td><td><span class="b stage">${escapeHtml(job.status || '—')}</span></td><td>⋯</td></tr>`).join('') : '<tr><td colspan="12" class="muted">No jobs match this filter.</td></tr>'}</tbody></table></div>`;
       }
       document.getElementById('jobs').innerHTML = `<div class="h1">Jobs</div><div class="sub">${fmtMaybe(data.jobs.total, 0)} tracked · ${(data.jobs.items || []).filter((j) => ['Discovered','Reviewing','Saved'].includes(j.status)).length} need review</div><div class="filters">${filters.map(([id, label]) => `<button class="filter-btn ${id === activeFilter ? 'active' : ''}" data-filter="${id}">${label}</button>`).join('')}<span style="flex:1"></span><button class="subtab ${activeView === 'table' ? 'active' : ''}" data-job-view="table">Dense</button><button class="subtab ${activeView === 'board' ? 'active' : ''}" data-job-view="board">Board</button><button class="subtab ${activeView === 'cards' ? 'active' : ''}" data-job-view="cards">Cards</button></div>${body}<div class="note">Excluded rows stay visible and dimmed rather than disappearing, so a filter cutting too much is obvious.</div>`;
       for (const btn of document.querySelectorAll('[data-job-view]')) btn.addEventListener('click', () => renderJobs(data, btn.dataset.jobView, activeFilter));
@@ -872,7 +968,20 @@ APP_HTML = """
           <div class="sechead"><h2>Stored variants</h2><div class="rule"></div><span class="meta">${fmtMaybe(workspace.variants?.length, 0)}</span></div><div class="variant-grid">${variantCards || '<div class="empty">No tailored variants stored yet for this job.</div>'}</div>
           <div class="sechead"><h2>Resume event feed</h2><div class="rule"></div><span class="meta">live · latest first</span></div><div class="event-feed" id="resume-events">${events.length ? events.map(renderEventCard).join('') : '<div class="empty">No resume events yet.</div>'}</div>`;
         const tailorNow = document.getElementById('tailor-now');
-        if (tailorNow) tailorNow.addEventListener('click', async () => { const base = workspace.bases?.[0]; await fetch('/api/v1/resume/tailor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ job_id: workspace.job.id, base_id: base?.id || null, label: `${workspace.job.title} tailored resume` }) }); location.reload(); });
+        if (tailorNow) tailorNow.addEventListener('click', async () => {
+          const original = tailorNow.textContent;
+          tailorNow.disabled = true;
+          tailorNow.textContent = 'Tailoring…';
+          try {
+            const base = workspace.bases?.[0];
+            await postJson('/api/v1/resume/tailor', { job_id: workspace.job.id, base_id: base?.id || null, label: `${workspace.job.title} tailored resume` });
+            location.reload();
+          } catch (error) {
+            tailorNow.disabled = false;
+            tailorNow.textContent = original || 'Regenerate';
+            renderInlineError('resume', 'Tailoring failed — try again', error);
+          }
+        });
         for (const btn of document.querySelectorAll('[data-accept-safe]')) btn.addEventListener('click', async () => { if (!btn.dataset.acceptSafe) return; await fetch(`/api/v1/resume/variants/${btn.dataset.acceptSafe}/accept-safe`, { method: 'POST', credentials: 'same-origin' }); location.reload(); });
         for (const btn of document.querySelectorAll('[data-accept-one]')) btn.addEventListener('click', async () => { await fetch(`/api/v1/resume/variants/${btn.dataset.variantId}/suggestions/${btn.dataset.acceptOne}`, { method: 'POST', credentials: 'same-origin' }); location.reload(); });
         for (const btn of document.querySelectorAll('[data-compile-variant]')) btn.addEventListener('click', async () => { if (!btn.dataset.compileVariant) return; await fetch(`/api/v1/resume/variants/${btn.dataset.compileVariant}/compile`, { method: 'POST', credentials: 'same-origin' }); location.reload(); });
@@ -898,12 +1007,14 @@ APP_HTML = """
 
     function renderCompanies(data) {
       const rows = data.companies.items || [];
-      document.getElementById('companies').innerHTML = `<div class=\"panel\"><div class=\"kicker\">11 · companies</div><div style=\"overflow:auto\"><table><thead><tr><th>Name</th><th>Domain</th><th>Priority</th><th>Target</th></tr></thead><tbody>${rows.length ? rows.map((company) => `<tr><td>${escapeHtml(company.name || '—')}</td><td>${escapeHtml(company.domain || '—')}</td><td>${fmtMaybe(company.priority, '—')}</td><td>${company.is_target ? 'Yes' : 'No'}</td></tr>`).join('') : '<tr><td colspan="4" class="muted">No companies tracked yet.</td></tr>'}</tbody></table></div></div>`;
+      const body = data.companies.status === 'loading' ? loadingRows(4, 'Loading companies…') : (rows.length ? rows.map((company) => `<tr><td>${escapeHtml(company.name || '—')}</td><td>${escapeHtml(company.domain || '—')}</td><td>${fmtMaybe(company.priority, '—')}</td><td>${company.is_target ? 'Yes' : 'No'}</td></tr>`).join('') : '<tr><td colspan="4" class="muted">No companies tracked yet.</td></tr>');
+      document.getElementById('companies').innerHTML = `<div class=\"panel\"><div class=\"kicker\">11 · companies</div><div style=\"overflow:auto\"><table><thead><tr><th>Name</th><th>Domain</th><th>Priority</th><th>Target</th></tr></thead><tbody>${body}</tbody></table></div></div>`;
     }
 
     function renderContacts(data) {
       const rows = data.contacts.items || [];
-      document.getElementById('contacts').innerHTML = `<div class=\"panel\"><div class=\"kicker\">12 · contacts</div><div style=\"overflow:auto\"><table><thead><tr><th>Name</th><th>Company</th><th>Title</th><th>Email</th></tr></thead><tbody>${rows.length ? rows.map((contact) => `<tr><td>${escapeHtml(contact.full_name || '—')}</td><td>${escapeHtml(contact.company_name || '—')}</td><td>${escapeHtml(contact.title || '—')}</td><td>${escapeHtml(contact.email || '—')}</td></tr>`).join('') : '<tr><td colspan="4" class="muted">No contacts stored yet.</td></tr>'}</tbody></table></div></div>`;
+      const body = data.contacts.status === 'loading' ? loadingRows(4, 'Loading contacts…') : (rows.length ? rows.map((contact) => `<tr><td>${escapeHtml(contact.full_name || '—')}</td><td>${escapeHtml(contact.company_name || '—')}</td><td>${escapeHtml(contact.title || '—')}</td><td>${escapeHtml(contact.email || '—')}</td></tr>`).join('') : '<tr><td colspan="4" class="muted">No contacts stored yet.</td></tr>');
+      document.getElementById('contacts').innerHTML = `<div class=\"panel\"><div class=\"kicker\">12 · contacts</div><div style=\"overflow:auto\"><table><thead><tr><th>Name</th><th>Company</th><th>Title</th><th>Email</th></tr></thead><tbody>${body}</tbody></table></div></div>`;
     }
 
     function renderDocuments(data) {
@@ -934,17 +1045,17 @@ APP_HTML = """
           <div class="hero-actions"><div class="acts"><a class="btn primary" href="/resume/${escapeHtml(job.id)}">Tailor resume</a>${job.application_url ? `<a class="btn" href="${escapeHtml(job.application_url)}" target="_blank" rel="noreferrer">Open original job ↗</a>` : ''}<button class="btn" type="button">Save</button><button class="btn" type="button">Skip</button></div></div>
         </div>
         <div class="hero-subgrid">
-          <section class="summary-card"><h3>Decision summary</h3><div class="summary-grid"><div class="summary-metric"><span class="label">Personal match</span><span class="value">${fmtMaybe(job.scores?.personal, 0)}</span><span class="meta">score v${fmtMaybe(job.scores?.version, '—')}</span></div><div class="summary-metric"><span class="label">Career-ops</span><span class="value">${fmtMaybe(job.scores?.career_ops, '—')}</span><span class="meta">5-point scale</span></div><div class="summary-metric"><span class="label">Tier</span><span class="value">${escapeHtml(job.scores?.tier || '—')}</span><span class="meta">priority class</span></div><div class="summary-metric"><span class="label">Sources</span><span class="value">${fmtMaybe(sources.length, 0)}</span><span class="meta">tracked copies</span></div></div></section>
+          <section class="summary-card"><h3>Decision summary</h3><div class="summary-grid"><div class="summary-metric"><span class="label">Personal match</span><span class="value">${fmtMaybe(job.scores?.personal, 0)}</span><span class="meta">score v${fmtMaybe(job.scores?.version, '—')}</span></div><div class="summary-metric"><span class="label">Career-ops</span><span class="value">${escapeHtml(careerOpsState(job).value)}</span><span class="meta">${escapeHtml(careerOpsState(job).label)}</span></div><div class="summary-metric"><span class="label">Tier</span><span class="value">${escapeHtml(job.scores?.tier || '—')}</span><span class="meta">priority class</span></div><div class="summary-metric"><span class="label">Sources</span><span class="value">${fmtMaybe(sources.length, 0)}</span><span class="meta">tracked copies</span></div></div></section>
           <section class="summary-card"><h3>Why this role is surfaced</h3><ul class="why">${topReasons(job).map((reason, i) => `<li><b>+${Math.max(4, 16 - i*3)}</b>${escapeHtml(reason)}</li>`).join('') || '<li><b>+0</b>No top reasons stored.</li>'}</ul></section>
         </div>
         <div class="detail" style="margin-top:24px">
           <div class="stack">
-            <section class="panel"><div class="ph"><h2>Match analysis</h2><span class="mono" style="font-size:10px;color:var(--text-tertiary)">score_version ${escapeHtml(job.scores?.version || '—')}</span></div><div class="pb receipt"><div class="hdr"><span>Personal match</span><span class="total-n">${fmtMaybe(job.scores?.personal, 0)}<span style="font-size:13px;color:var(--text-tertiary)"> / 100</span></span></div><div class="megabar"><i style="width:${Math.max(2, Math.min(100, Number(job.scores?.personal || 0)))}%"></i></div>${renderBreakdownRows(job)}<div class="rdiv"></div><div class="rtot"><span>${fmtMaybe(job.scores?.personal, 0)}</span><span>TOTAL</span><span style="color:var(--text-tertiary);font-weight:400">clamped 0–100</span></div><div class="careerops-line"><div><div class="muted mono">tracker bridge</div><div class="muted2" style="margin-top:4px">${job.application?.careerops_tracker_num ? `Report #${escapeHtml(job.application.careerops_tracker_num)}` : 'No linked tracker id'} · ${job.application?.careerops_state ? escapeHtml(job.application.careerops_state) : 'state unknown'}</div></div><div><span class="value">${fmtMaybe(job.scores?.career_ops, '—')}</span><span style="color:var(--text-tertiary);font-size:12px"> / 5</span></div></div></div></section>
+            <section class="panel"><div class="ph"><h2>Match analysis</h2><span class="mono" style="font-size:10px;color:var(--text-tertiary)">score_version ${escapeHtml(job.scores?.version || '—')}</span></div><div class="pb receipt"><div class="hdr"><span>Personal match</span><span class="total-n">${fmtMaybe(job.scores?.personal, 0)}<span style="font-size:13px;color:var(--text-tertiary)"> / 100</span></span></div><div class="megabar"><i style="width:${Math.max(2, Math.min(100, Number(job.scores?.personal || 0)))}%"></i></div>${renderBreakdownRows(job)}<div class="rdiv"></div><div class="rtot"><span>${fmtMaybe(job.scores?.personal, 0)}</span><span>TOTAL</span><span style="color:var(--text-tertiary);font-weight:400">clamped 0–100</span></div>${job.application?.careerops_tracker_num || job.scores?.career_ops ? `<div class="careerops-line"><div><div class="muted mono">Career-Ops evaluation</div><div class="muted2" style="margin-top:4px">${escapeHtml(careerOpsState(job).help)} · ${job.application?.careerops_state ? escapeHtml(job.application.careerops_state) : escapeHtml(careerOpsState(job).label)}</div></div><div><span class="value">${escapeHtml(careerOpsState(job).value)}</span><span style="color:var(--text-tertiary);font-size:12px">${job.scores?.career_ops ? ' / 5' : ''}</span></div></div>` : ''}</div></section>
             <section class="panel"><div class="ph"><h2>Concerns and gaps</h2></div><div class="pb"><ul class="concerns-list">${concernText(job).length ? concernText(job).map((c) => `<li><span style="color:var(--sev-medium);font-family:var(--font-mono)">!</span><div>${escapeHtml(c)}</div></li>`).join('') : '<li><span style="color:var(--positive);font-family:var(--font-mono)">✓</span><div>No explicit concerns stored.</div></li>'}</ul></div></section>
             <section class="panel"><div class="ph"><h2>Job description</h2><span class="mono" style="font-size:10px;color:var(--text-tertiary)">${fmtMaybe(job.sources?.[0]?.source_platform, 'stored')}</span></div><div class="pb">${String(snapshotText || '').toLowerCase().includes('ai assistant') ? `<div class="injbanner"><div><b>⚑ Suspicious content — treated as data</b>This posting contains text that appears addressed to an automated reviewer. It is stored for audit and should not influence scoring.</div></div>` : ''}<div class="jdbox">${paragraphize(snapshotText || 'No description stored.')}</div></div></section>
           </div>
           <div class="stack">
-            <section class="panel"><div class="ph"><h2>Sponsorship analysis</h2>${sponsorshipBadge(job)}</div><div class="pb">${sponsorEvidence.length ? sponsorEvidence.map((ev) => `<div class="evidence-card"><div class="eyebrow"><span>${escapeHtml(ev.signal_type || 'signal')}</span><span>${fmtDateShort(ev.source_as_of || ev.created_at)}</span></div><div class="quote">${escapeHtml(ev.evidence_text || ev.quoted_span || ev.class_implied || 'No evidence text')}</div><div class="meta-line"><span>${escapeHtml(ev.class_implied || job.sponsorship?.class || '—')}</span><span>${escapeHtml(ev.source_url || 'stored evidence')}</span></div></div>`).join('') : `<div class="evidence-card"><div class="eyebrow"><span>Summary</span><span>${escapeHtml(job.sponsorship?.class || 'unknown')}</span></div><div class="quote">${escapeHtml(job.sponsorship?.evidence_summary || 'No sponsorship evidence stored.')}</div></div>`}<div class="note">Derived signals are advisory only; use them as prioritization context rather than a guarantee.</div></div></section>
+            <section class="panel"><div class="ph"><h2>Sponsorship analysis</h2>${sponsorshipBadge(job)}</div><div class="pb">${sponsorEvidence.length ? sponsorEvidence.map((ev) => `<div class="evidence-card"><div class="eyebrow"><span>${escapeHtml(ev.signal_type || 'signal')}</span><span>${escapeHtml(sourceYearLabel(ev))} · Retrieved ${fmtDateShort(ev.created_at)}</span></div><div class="quote">${escapeHtml(ev.evidence_text || ev.quoted_span || ev.class_implied || 'No evidence text')}</div><div class="meta-line"><span>${escapeHtml(ev.class_implied || job.sponsorship?.class || '—')}</span><span>${escapeHtml(ev.source_url || 'stored evidence')}</span></div><div class="note" style="margin-top:8px">${escapeHtml(sponsorshipDerivation(job, ev))}</div></div>`).join('') : `<div class="evidence-card"><div class="eyebrow"><span>Summary</span><span>${escapeHtml(job.sponsorship?.class || 'unknown')}</span></div><div class="quote">${escapeHtml(job.sponsorship?.evidence_summary || 'No sponsorship evidence stored.')}</div></div>`}<div class="note">${escapeHtml(sponsorshipDerivation(job, sponsorEvidence[0] || null))}<br>Derived signals are advisory only; use them as prioritization context rather than a guarantee.</div></div></section>
             <section class="panel"><div class="ph"><h2>Activity</h2></div><div class="pb timeline">${activity.length ? activity.map((event) => `<div class="r"><span class="dt">${fmtDateShort(event.occurred_at)}</span><span>${escapeHtml(event.event_type)}</span><span class="who">${escapeHtml(event.actor || 'system')}</span></div>`).join('') : '<div class="colempty">No activity recorded yet.</div>'}</div></section>
             <section class="panel"><div class="ph"><h2>Sources</h2><span class="mono" style="font-size:10px;color:var(--text-tertiary)">seen on ${fmtMaybe(sources.length, 0)}</span></div><div class="pb timeline">${sources.length ? sources.map((src) => `<div class="r"><span class="dt">${escapeHtml(src.source_platform || 'source')}</span><span style="color:var(--text-secondary);font-size:10.5px;word-break:break-all">${escapeHtml(src.source_url || '—')}</span><span class="who">${fmtDateShort(src.discovered_at)}</span></div>`).join('') : '<div class="colempty">No sources stored.</div>'}</div></section>
           </div>
@@ -970,7 +1081,7 @@ APP_HTML = """
       await update('health', '/api/v1/health', state.health, 6000);
       await update('status', '/api/v1/automation/status', state.status, 6000);
       const activeId = document.querySelector('.section.active')?.id || 'today';
-      document.getElementById('scan-pill').innerHTML = `<span class="live-dot"></span>Scan ${state.health.status || state.status.health || 'unknown'}`;
+      document.getElementById('scan-pill').innerHTML = scanPill(state);
       renderToday(state);
       renderJobs(state);
       renderPipeline(state);
@@ -996,19 +1107,19 @@ APP_HTML = """
         let digest = { new_jobs_count: 0, followups_due_count: 0, top_jobs: [], followups: [], latest_scan: null };
         let health = { status: 'loading', database: 'unknown', adapter: 'unknown', checks: {}, warnings: ['Health check is loading in the background.'] };
         let status = { health: 'loading', latest_scan: null, next_scan_at: null, warning: 'Automation status is loading in the background.' };
-        let runs = { items: [], total: 0 };
-        let failures = { items: [], total: 0 };
+        let runs = { items: [], total: 0, status: 'loading' };
+        let failures = { items: [], total: 0, status: 'loading' };
         let queue = { items: [], total: 0 };
         let applications = { items: [], total: 0 };
-        let companies = { items: [], total: 0 };
-        let contacts = { items: [], total: 0 };
-        let documents = { items: [], total: 0 };
-        let interviews = { items: [], total: 0 };
-        let resumeBases = { items: [], total: 0 };
+        let companies = { items: [], total: 0, status: 'loading' };
+        let contacts = { items: [], total: 0, status: 'loading' };
+        let documents = { items: [], total: 0, status: 'loading' };
+        let interviews = { items: [], total: 0, status: 'loading' };
+        let resumeBases = { items: [], total: 0, status: 'loading' };
         let resumeWorkspace = resumeMatch ? await fetchJsonOptional(`/api/v1/jobs/${resumeMatch[1]}/resume`, null, 5000) : null;
         const state = { jobs, pipeline, analytics, digest, health, status, runs, failures, queue, applications, companies, contacts, documents, interviews, resumeBases, resumeWorkspace };
         window.__JR_STATE = state;
-        document.getElementById('scan-pill').innerHTML = `<span class="live-dot"></span>Scan ${state.health.status || state.status.health || 'unknown'}`;
+        document.getElementById('scan-pill').innerHTML = scanPill(state);
         renderToday(state);
         renderJobs(state);
         renderPipeline(state);
@@ -1048,7 +1159,6 @@ APP_HTML = """
           showSection('jobs');
           renderPrimaryNav('jobs', state);
         });
-        refreshOptionalState(state).catch((error) => console.debug('Background dashboard refresh failed', error?.message || error));
       } catch (error) {
         const failureTarget = document.querySelector('.main') || document.body;
         failureTarget.innerHTML = `<div class=\"panel\"><div class=\"pb\"><h2>Dashboard failed to load</h2><div class=\"code\">${escapeHtml(error?.message || error)}</div></div></div>`;
