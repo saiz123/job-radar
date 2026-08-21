@@ -642,10 +642,26 @@ APP_HTML = """
         </div>`;
     }
 
-    async function fetchJson(path) {
-      const res = await fetch(path, { credentials: 'same-origin' });
-      if (!res.ok) throw new Error(`${path} -> HTTP ${res.status}`);
-      return await res.json();
+    async function fetchJson(path, options = {}) {
+      const timeoutMs = options.timeoutMs || 0;
+      const controller = timeoutMs ? new AbortController() : null;
+      const timer = timeoutMs ? setTimeout(() => controller.abort(), timeoutMs) : null;
+      try {
+        const res = await fetch(path, { credentials: 'same-origin', signal: controller ? controller.signal : undefined });
+        if (!res.ok) throw new Error(`${path} -> HTTP ${res.status}`);
+        return await res.json();
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+    }
+
+    async function fetchJsonOptional(path, fallback, timeoutMs = 3500) {
+      try {
+        return await fetchJson(path, { timeoutMs });
+      } catch (error) {
+        console.warn('Optional dashboard request failed', path, error?.message || error);
+        return fallback;
+      }
     }
 
     function renderPrimaryNav(activeId, state = null) {
@@ -935,27 +951,61 @@ APP_HTML = """
         </div>`;
     }
 
+    async function refreshOptionalState(state) {
+      const update = async (key, path, fallback, timeoutMs = 10000) => {
+        state[key] = await fetchJsonOptional(path, fallback, timeoutMs);
+      };
+      await update('pipeline', '/api/v1/pipeline', state.pipeline, 10000);
+      await update('analytics', '/api/v1/analytics?window=90d', state.analytics, 10000);
+      await update('digest', '/api/v1/digest?since=24h', state.digest, 10000);
+      await update('applications', '/api/v1/applications', state.applications, 10000);
+      await update('companies', '/api/v1/companies', state.companies, 10000);
+      await update('contacts', '/api/v1/contacts', state.contacts, 10000);
+      await update('documents', '/api/v1/documents', state.documents, 10000);
+      await update('interviews', '/api/v1/interviews', state.interviews, 10000);
+      await update('resumeBases', '/api/v1/resume/bases', state.resumeBases, 10000);
+      await update('queue', '/api/v1/jobs/evaluation-queue?limit=8', state.queue, 10000);
+      await update('runs', '/api/v1/automation/runs?limit=10', state.runs, 10000);
+      await update('failures', '/api/v1/automation/failures', state.failures, 10000);
+      await update('health', '/api/v1/health', state.health, 6000);
+      await update('status', '/api/v1/automation/status', state.status, 6000);
+      const activeId = document.querySelector('.section.active')?.id || 'today';
+      document.getElementById('scan-pill').innerHTML = `<span class="live-dot"></span>Scan ${state.health.status || state.status.health || 'unknown'}`;
+      renderToday(state);
+      renderJobs(state);
+      renderPipeline(state);
+      renderResumeStudio(state);
+      renderApplications(state);
+      renderInterviews(state);
+      renderCompanies(state);
+      renderContacts(state);
+      renderDocuments(state);
+      renderMetrics(state);
+      renderAutomation(state);
+      renderPrimaryNav(activeId, state);
+      showSection(activeId);
+      bindJobLinks(state);
+    }
+
     async function boot() {
       try {
         const resumeMatch = INITIAL_PATH.match(/^[/]resume[/]([a-f0-9]+)$/);
-        const [jobs, pipeline, analytics, digest, health, status, runs, failures, queue, applications, companies, contacts, documents, interviews, resumeBases, resumeWorkspace] = await Promise.all([
-          fetchJson('/api/v1/jobs'),
-          fetchJson('/api/v1/pipeline'),
-          fetchJson('/api/v1/analytics?window=90d'),
-          fetchJson('/api/v1/digest?since=24h'),
-          fetchJson('/api/v1/health'),
-          fetchJson('/api/v1/automation/status'),
-          fetchJson('/api/v1/automation/runs?limit=10'),
-          fetchJson('/api/v1/automation/failures'),
-          fetchJson('/api/v1/jobs/evaluation-queue?limit=8'),
-          fetchJson('/api/v1/applications'),
-          fetchJson('/api/v1/companies'),
-          fetchJson('/api/v1/contacts'),
-          fetchJson('/api/v1/documents'),
-          fetchJson('/api/v1/interviews'),
-          fetchJson('/api/v1/resume/bases'),
-          resumeMatch ? fetchJson(`/api/v1/jobs/${resumeMatch[1]}/resume`) : Promise.resolve(null),
-        ]);
+        const jobs = await fetchJson('/api/v1/jobs', { timeoutMs: 10000 });
+        let pipeline = { stage_order: [], columns: {} };
+        let analytics = { window: '90d', by_status: {}, funnel: {}, followup_compliance: {}, resume_attribution: [], warnings: [], top_jobs: [], jobs_total: 0 };
+        let digest = { new_jobs_count: 0, followups_due_count: 0, top_jobs: [], followups: [], latest_scan: null };
+        let health = { status: 'loading', database: 'unknown', adapter: 'unknown', checks: {}, warnings: ['Health check is loading in the background.'] };
+        let status = { health: 'loading', latest_scan: null, next_scan_at: null, warning: 'Automation status is loading in the background.' };
+        let runs = { items: [], total: 0 };
+        let failures = { items: [], total: 0 };
+        let queue = { items: [], total: 0 };
+        let applications = { items: [], total: 0 };
+        let companies = { items: [], total: 0 };
+        let contacts = { items: [], total: 0 };
+        let documents = { items: [], total: 0 };
+        let interviews = { items: [], total: 0 };
+        let resumeBases = { items: [], total: 0 };
+        let resumeWorkspace = resumeMatch ? await fetchJsonOptional(`/api/v1/jobs/${resumeMatch[1]}/resume`, null, 5000) : null;
         const state = { jobs, pipeline, analytics, digest, health, status, runs, failures, queue, applications, companies, contacts, documents, interviews, resumeBases, resumeWorkspace };
         window.__JR_STATE = state;
         document.getElementById('scan-pill').innerHTML = `<span class="live-dot"></span>Scan ${state.health.status || state.status.health || 'unknown'}`;
@@ -998,6 +1048,7 @@ APP_HTML = """
           showSection('jobs');
           renderPrimaryNav('jobs', state);
         });
+        refreshOptionalState(state).catch((error) => console.debug('Background dashboard refresh failed', error?.message || error));
       } catch (error) {
         const failureTarget = document.querySelector('.main') || document.body;
         failureTarget.innerHTML = `<div class=\"panel\"><div class=\"pb\"><h2>Dashboard failed to load</h2><div class=\"code\">${escapeHtml(error?.message || error)}</div></div></div>`;
